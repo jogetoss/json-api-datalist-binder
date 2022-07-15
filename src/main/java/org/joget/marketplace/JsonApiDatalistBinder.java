@@ -61,12 +61,12 @@ public class JsonApiDatalistBinder extends DataListBinderDefault {
 
     @Override
     public String getVersion() {
-        return "7.0.0";
+        return "7.0.1";
     }
 
     @Override
     public String getDescription() {
-        return "Retrieves data rows from a JSON API.";
+        return "Retrieves data rows from a JSON API, with ability to traverse nested JSON objects.";
     }
 
     @Override
@@ -95,7 +95,7 @@ public class JsonApiDatalistBinder extends DataListBinderDefault {
                 o = results.get(prefix);
             }
             
-            recursiveGetColumns(o, columns, prefix, multirowBaseObject);
+            recursiveGetColumns(o, columns, prefix, multirowBaseObject, false);
         }
         
         List<DataListColumn> temp = new ArrayList<DataListColumn>(columns.values());
@@ -110,19 +110,25 @@ public class JsonApiDatalistBinder extends DataListBinderDefault {
         return temp.toArray(new DataListColumn[0]);
     }
     
-    protected void recursiveGetColumns(Object o,  Map<String, DataListColumn> columns, String prefix, String base) {
+    protected void recursiveGetColumns(Object o,  Map<String, DataListColumn> columns, String prefix, String base, boolean baseMatch) {
+        //Becomes true if path matches base JSON object name
         if (prefix.equals(base)) {
             prefix = "";
+            baseMatch = true;
         }
+        
         if (o instanceof Object[]) {
             Object[] array = (Object[]) o;
             if (array.length > 0) {
-                int max = array.length;  //to prevent empty object, loop a few data
+                //to prevent empty object, loop a few data
+                /* Just in case the JSON response has different object keys on multiple rows, 
+                    although ideally the response's array keys SHOULD be consistent */
+                int max = array.length;  
                 if (max > 5) {
                     max = 5;
                 }
                 for (int i = 0; i < max; i++) {
-                    recursiveGetColumns(array[i], columns, prefix, base);
+                    recursiveGetColumns(array[i], columns, prefix, base, baseMatch);
                 }
             }
         } else if (o instanceof Map) {
@@ -131,10 +137,12 @@ public class JsonApiDatalistBinder extends DataListBinderDefault {
             }
             Map m = (Map) o;
             for (Object k : m.keySet()) {
-                recursiveGetColumns(m.get(k), columns, prefix + k.toString(), base);
+                recursiveGetColumns(m.get(k), columns, prefix + k.toString(), base, baseMatch);
             }
         } else {
-            columns.put(prefix, new DataListColumn(prefix, prefix, true));
+            if (baseMatch) {
+                columns.put(prefix, new DataListColumn(prefix, prefix, true));
+            }
         }
     }
     
