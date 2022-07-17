@@ -141,14 +141,16 @@ public class JsonApiDatalistBinder extends DataListBinderDefault {
             }
         } else {
             if (baseMatch) {
-                columns.put(prefix, new DataListColumn(prefix, prefix, true));
+                //dot symbol is reserved keyword. Replace to dash symbol.
+                columns.put(prefix.replace(".", "-"), new DataListColumn(prefix.replace(".", "-"), prefix.replace(".", "-"), true));
             }
         }
     }
     
     @Override
     public String getPrimaryKeyColumnName() {
-        return getPropertyString("primaryKey");
+        //dot symbol is reserved keyword. Replace to dash symbol.
+        return getPropertyString("primaryKey").replace(".", "-");
     }
     
     @Override
@@ -180,7 +182,7 @@ public class JsonApiDatalistBinder extends DataListBinderDefault {
                     o = results.get(prefix);
                 }
 
-                recursiveGetData(o, resultList, new HashMap<String, Object>(), prefix, multirowBaseObject);
+                recursiveGetData(o, resultList, new HashMap<String, Object>(), prefix, multirowBaseObject, false);
             }
             
             setProperty("jsonResultList", resultList);
@@ -190,12 +192,12 @@ public class JsonApiDatalistBinder extends DataListBinderDefault {
         return resultList;
     }
     
-    protected void recursiveGetData(Object o, DataListCollection resultList, Map<String, Object> data, String prefix, String base) {
+    protected Map<String, Object> recursiveGetData(Object o, DataListCollection resultList, Map<String, Object> data, String prefix, String base, boolean baseMatch) {        
         if (o instanceof Object[]) {
             Object[] array = (Object[]) o;
             if (array.length > 0) {
                 for (int i = 0; i < array.length; i++) {
-                    recursiveGetData(array[i], resultList, data, prefix, base);
+                    recursiveGetData(array[i], resultList, data, prefix, base, baseMatch);
                 }
             }
         } else if (o instanceof Map) {
@@ -204,6 +206,7 @@ public class JsonApiDatalistBinder extends DataListBinderDefault {
             
             if (prefix.equals(base)) {
                 prefix = "";
+                baseMatch = true;
                 resultList.add(newData);
             }
             
@@ -219,15 +222,21 @@ public class JsonApiDatalistBinder extends DataListBinderDefault {
                     last = m.get(k);
                     lastKey = k.toString();
                 } else {
-                    recursiveGetData(m.get(k), resultList, newData, prefix + k.toString(), base);
+                    data = recursiveGetData(m.get(k), resultList, newData, prefix + k.toString(), base, baseMatch);
+                    newData.putAll(data);
                 }
             }
             if (last != null) {
-                recursiveGetData(last, resultList, newData, prefix + lastKey, base);
+                recursiveGetData(last, resultList, newData, prefix + lastKey, base, baseMatch);
             }
-        } else {
-            data.put(prefix, o);
+        } else if (o instanceof String) {
+            if (baseMatch) {
+                //dot symbol is reserved keyword. Replace to dash symbol.
+                data.put(prefix.replace(".", "-"), o);
+            }
         }
+        
+        return data;
     }
     
     @Override
