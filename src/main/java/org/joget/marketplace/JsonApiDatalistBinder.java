@@ -232,7 +232,16 @@ public class JsonApiDatalistBinder extends DataListBinderDefault {
         } else if (o instanceof String) {
             if (baseMatch) {
                 //dot symbol is reserved keyword. Replace to dash symbol.
-                data.put(prefix.replace(".", "-"), o);
+                
+                if(data.containsKey(prefix.replace(".", "-"))){
+                    //append to existing if key already exists
+                    String existingValue = data.get(prefix.replace(".", "-")).toString();
+                    existingValue += ";" + o;
+                    data.put(prefix.replace(".", "-"), existingValue);
+                }else{
+                    //new key, use put
+                    data.put(prefix.replace(".", "-"), o);
+                }
             }
         }
         
